@@ -1,0 +1,31 @@
+steps:
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    args:
+      - '-c'
+      - |
+        gsutil -m rm -r $(gsutil ls gs://${_LOGS_BUCKET_NAME}/build_logs/${_APP_NAME}/log-* | grep -Ev "log-${BUILD_ID}*")
+        gsutil cp -r gs://${_APP_BUCKET_NAME}/${_APP_NAME}/* ./
+    entrypoint: bash
+  - name: gcr.io/cloud-builders/mvn
+    args:
+      - clean
+      - install
+  - name: gcr.io/cloud-builders/mvn
+    args:
+      - clean
+      - verify
+      - sonar:sonar
+      - -Dsonar.projectKey=${_APP_NAME}
+      - -Dsonar.projectName=${_APP_NAME}
+      - -Dsonar.host.url=http://34.47.174.84
+      - -Dsonar.token=sqp_d99b437815baa58744b0465d5ce6078a83df0be9
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    args:
+      - '-c'
+      - |
+        gsutil rm gs://${_LOGS_BUCKET_NAME}/output/${_APP_NAME}/*
+        gsutil cp target/*.jar gs://${_LOGS_BUCKET_NAME}/output/${_APP_NAME}/
+    entrypoint: bash
+logsBucket: 'gs://${_LOGS_BUCKET_NAME}/build_logs/${_APP_NAME}/'
+options:
+  logging: GCS_ONLY
